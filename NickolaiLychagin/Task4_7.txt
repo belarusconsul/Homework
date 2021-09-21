@@ -1,0 +1,17 @@
+
+ Task 4.7*
+ 1. Run the module modules/mod_a.py. Check its result. Explain why does
+ this happen. 
+ 2. Try to change x to a list [1,2,3]. Explain the result.
+ 3. Try to change import to from x import * where x - module names.
+ Explain the result.
+
+ 1. First we import mod_c, which sets mod_c.x equal to 5. Then we import
+ mod_b which sets mod_c.x equal to 5. Then we print mod_c.x.
+ 2. First we import mod_c, which sets mod_c.x equal to [1,2,3]. Then we import
+ mod_b which sets mod_c.x equal to 5. Then we print mod_c.x.
+ 3. When we import a module like 'import mod_c' we should reference its
+ variables prepending them with the module name. Direct names are not
+ seen by the current scope. When we import a module like 'from mod_c import *'
+ we copy all its variables to the current scope. After that 'x' and 'mod_c.x'
+ become independent of each other.
