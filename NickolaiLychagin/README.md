@@ -1,25 +1,63 @@
-# Pure Python command-line RSS reader.
+# Pure Python command-line RSS reader
 
 
-## Homework for EPAM Python Training 2021.09
+### Homework for EPAM Python Training 2021.09
 
 
 ### Author: Nickolai Lychagin, belarusconsul@gmail.com
-### Version 1.0, 06.10.2021
+### Version 1.1, 10.10.2021
 
+> This program:
+> 
+> - downloads information from RSS news feed
+> - processes various data from news items (title, description, date, image, link)
+> - prints data to console in text or JSON format 
 
+---
+## INSTALLATION
+
+1. Clone repository to your local drive:<br>
+   `git clone https://github.com/belarusconsul/Homework.git`
+
+2. You can run this program without installation. The executable script is in the master branch:<br>
+   *<path to /Homework/NickolaiLychagin/src/rss_reader/rss_reader.py>*
+   
+3. Install prebuilt package to your computer:<br>
+   **Windows:**<br>
+   `py -m pip install <path to /Homework/NickolaiLychagin/dist/rss_reader-1.1-py3-none-any.whl>`<br>
+   **Unix/MacOS:**<br>
+   `python3 -m pip install <path to /Homework/NickolaiLychagin/dist/rss_reader-1.1-py3-none-any.whl>`<br>
+
+   This installs program from a Wheel file (built distribution). If you prefer to use a Source Distribution file (source archive) run:<br>
+   **Windows:**<br>
+   `py -m pip install <path to /Homework/NickolaiLychagin/dist/rss_reader-1.1.tar.gz>`<br>
+   **Unix/MacOS:**<br>
+   `python3 -m pip install <path to /Homework/NickolaiLychagin/dist/rss_reader-1.1.tar.gz>`<br>
+
+   After that you can run program through CLI utility rss_reader.
+
+4. If you want to build the distribution package yourself, go to *<path to /Homework/NickolaiLychagin/>* in the master branch and run:<br>
+   **Windows:**<br>
+   `py -m build`<br>
+   **Unix/MacOS:**<br>
+   `python3 -m build`
+ 
+---
+## USAGE
+
+1. Without installation:<br>
+	**Windows:**<br>
+	`rss_reader.py [-h] [--version] [--json] [--verbose] [--limit LIMIT] source` (run from directory with rss_reader.py) or<br>
+	`py -m rss_reader [-h] [--version] [--json] [--verbose] [--limit LIMIT] source` (if directory with rss_reader.py is in sys.path)<br>
+	**Unix/MacOS:**<br>
+	`python3 rss_reader.py [-h] [--version] [--json] [--verbose] [--limit LIMIT] source`(run from directory with rss_reader.py) or<br>
+	`python3 -m rss_reader [-h] [--version] [--json] [--verbose] [--limit LIMIT] source`(if directory with rss_reader.py is in sys.path)<br>
+
+2. With installation of CLI utility:<br>
+	**Windows/Unix/MacOS:**<br>
+	`rss_reader [-h] [--version] [--json] [--verbose] [--limit LIMIT] source`
 
 ```
-This program:
-
-    - downloads information from RSS news feed
-    - processes various data from news items (title, description, date, image, link)
-    - prints data to console in text or JSON format
-```
-
-```
-Usage: rss_reader.py [-h] [--version] [--json] [--verbose] [--limit LIMIT] source
-
     positional arguments:
       source         RSS URL
 
@@ -29,14 +67,16 @@ Usage: rss_reader.py [-h] [--version] [--json] [--verbose] [--limit LIMIT] sourc
       --json         Print result as JSON in stdout
       --verbose      Outputs verbose status messages
       --limit LIMIT  Limit news topics if this parameter provided
-
 ```
+
 
 ---
 
-```
-1. Sample output in text format:
+## SAMPLE OUTPUT
 
+
+> In text format:
+```
 Feed: The Latest News from the UK and Around the World | Sky News
 Description: Sky news delivers breaking news, headlines and top stories from business, politics, entertainment and more in the UK and worldwide.
 
@@ -53,9 +93,9 @@ Facebook's products "harm children, stoke division and weaken our democracy", a 
 Read more: http://news.sky.com/story/facebook-whistleblower-frances-haugen-tells-congress-hearing-tackle-the-company-like-big-tobacco-12426665
 ```
 
-```
-2. Sample output in JSON format:
 
+> In JSON format:
+```
 {
     "Channel": {
         "Title": "The Latest News from the UK and Around the World | Sky News",

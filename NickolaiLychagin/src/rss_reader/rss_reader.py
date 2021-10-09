@@ -9,7 +9,31 @@ This module:
     - processes various data from news items (title, description, date, image, link)
     - prints data to console in text or JSON format
 
-Usage: rss_reader.py [-h] [--version] [--json] [--verbose] [--limit LIMIT] source
+Usage:
+
+    Without installation:
+
+        Windows:
+
+            rss_reader.py [-h] [--version] [--json] [--verbose] [--limit LIMIT] source
+            (run from directory with rss_reader.py)
+
+            py -m rss_reader [-h] [--version] [--json] [--verbose] [--limit LIMIT] source
+            (if directory with rss_reader.py is in sys.path)
+
+        Unix/MacOS:
+
+            python3 rss_reader.py [-h] [--version] [--json] [--verbose] [--limit LIMIT] source
+            (run from directory with rss_reader.py)
+
+            python3 -m rss_reader [-h] [--version] [--json] [--verbose] [--limit LIMIT] source
+            (if directory with rss_reader.py is in sys.path)
+
+    With installation of CLI utility:
+
+        Windows/Unix/MacOS:
+
+            rss_reader [-h] [--version] [--json] [--verbose] [--limit LIMIT] source
 
     positional arguments:
       source         RSS URL
@@ -36,12 +60,25 @@ Imported modules:
 Functions:
 
     parse_args() -> object
+    Parse arguments from command-line input.
+
     config_logging(verbose_flag: bool)
-    strip_html(text: str) -> str
+    Config logging object to log events to stdout.
+
     download_xml(url: str) -> object
+    Download XML data from URL.
+
+    strip_html(text: str) -> str
+    Remove HTML tags and spaces at the beginning and at the end of a string.
+
     process_rss(root: object, limit: int/None) -> dict
+    Process XML data from a RSS feed into a dictionary.
+
     dict_to_string(news_dict: dict, json_flag: bool) -> str
+    Convert a dictionary of RSS data into a string.
+
     run_rss_reader()
+    Main program logic of a RSS reader.
 """
 
 import argparse
@@ -65,7 +102,7 @@ def parse_args():
 
     parser = argparse.ArgumentParser(prog="rss_reader.py",
                                      description="Pure Python command-line RSS reader.")
-    parser.add_argument("--version", action="version", version="Version 1.0",
+    parser.add_argument("--version", action="version", version="Version 1.1",
                         help="Print version info")
     parser.add_argument("--json", action="store_true",
                         help="Print result as JSON in stdout")
