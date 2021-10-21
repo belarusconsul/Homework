@@ -3,4 +3,3 @@ htmlcov/
 develop-eggs/
 *.egg-info/
 .coverage
-rss_cache.db
