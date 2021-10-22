@@ -4,14 +4,14 @@
 
     Functions:
 
-        sanitize_paths(paths: dict) -> dict
+        sanitize_paths(paths: dict, colorize: bool) -> dict
         Check that path is valid and file creatable, create necessary folders,
         add file extension if absent, ask user to confirm file overwriting if it exists.
 
         convert_to_html(news_dict: dict, date: str/None, souce: str/None) -> str
         Convert information from a dictionary to HTML-formatted string.
 
-        create_files(html_str: str, filenames: dict)
+        create_files(html_str: str, filenames: dict, colorize: bool)
         Create HTML and/or PDF file from HTML-formatted string.
 """
 
@@ -24,14 +24,16 @@ from socket import gaierror
 from xhtml2pdf import pisa
 
 from .rss_reader_dates import parse_date, reformat_date
+from .rss_reader_colors import COLORS
 
 
-def sanitize_paths(paths):
+def sanitize_paths(paths, colorize):
     """Check that path is valid and file creatable, create necessary folders,
     add file extension if absent, ask user to confirm file overwriting if it exists.
 
     Parameters:
         paths: dict - Dictionary of formats and paths entered by user as input arguments.
+        colorize: bool - True (print messages in colorized mode) or False (print messages in normal mode).
 
     Returns
         filenames: dict - Dictionary of formats and valid paths.
@@ -50,11 +52,24 @@ def sanitize_paths(paths):
                 os.makedirs(dirname)
                 logging.info("Necessary new folder structure created")
             with open(filename, "r"):
-                consent = input(f"File '{filename}' already exists. Do you want to overwrite it? "
+                logging.warning(f"File {filename} already exists")
+                confirmation = (f"File '{filename}' already exists. Do you want to overwrite it? "
                                 "Press 'y' to confirm or any other key to cancel.\n")
+                if colorize:
+                    os.system("")
+                    consent = input(COLORS["red"] + confirmation + COLORS["reset"])
+                else:
+                    consent = input(confirmation)
                 if consent.upper() == "Y":
                     filenames[path] = filename
                     logging.info(f"Consent received to rewrite the file {filename}")
+                else:
+                    logging.info(f"Operation to rewrite the file {filename} cancelled by user")
+                    message = "Operation cancelled"
+                    if colorize:
+                        print(COLORS["yellow"] + message + COLORS["reset"])
+                    else:
+                        print(message)
         except FileNotFoundError:
             try:
                 with open(filename, "x"):
@@ -151,12 +166,13 @@ def convert_to_html(news_dict, date, source):
     return html_str
 
 
-def create_files(html_str, filenames):
+def create_files(html_str, filenames, colorize):
     """Create HTML and/or PDF file from HTML-formatted string.
 
     Parameters:
         html_str: str - HTML-formatted string.
         filenames: dict - Dictionary of formats and valid paths.
+        colorize: bool - True (print messages in colorized mode) or False (print messages in normal mode).
     """
 
     for filename in filenames:
@@ -164,7 +180,6 @@ def create_files(html_str, filenames):
             with open(filenames[filename], "w", encoding="utf-8") as file:
                 file.write(html_str)
                 logging.info(f"HTML file '{filenames[filename]}' created.")
-                print(f"File '{filenames[filename]}' successfully created.")
         else:
             try:
                 pdf_file = open(filenames[filename], "w+b")
@@ -173,11 +188,11 @@ def create_files(html_str, filenames):
                     css_str = f.read()
             except PermissionError:
                 logging.error(f"File {filenames[filename]} can't be opened: no permission")
+                continue
             else:
                 try:
                     pisa.CreatePDF(html_str, dest=pdf_file, encoding="utf-8", default_css=css_str)
                     logging.info(f"PDF file '{filenames[filename]}' created.")
-                    print(f"File '{filenames[filename]}' successfully created.")
                 # if no internet connection
                 except gaierror:
                     logging.info("No internet connection. Building file with no photos")
@@ -189,9 +204,14 @@ def create_files(html_str, filenames):
                                    link_callback=lambda x, y: font if x.endswith("arial.ttf") else image)
                     sys.stdout = sys.__stdout__
                     logging.info(f"PDF file '{filenames[filename]}' created.")
-                    print(f"File '{filenames[filename]}' successfully created.")
                 # for possible other exceptions in xhtml2pdf module
                 except Exception as err:
                     logging.error(f"File {filenames[filename]} can't be created: {err}")
+                    continue
                 finally:
                     pdf_file.close()
+        message = f"File '{filenames[filename]}' successfully created."
+        if colorize:
+            print(COLORS["green"] + message + COLORS["reset"])
+        else:
+            print(message)

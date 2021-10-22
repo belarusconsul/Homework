@@ -127,13 +127,19 @@ Classes:
         Methods:
 
             tearDown
-            Clean test file with SQL database.
+            Clean test file with SQL database, delete test folder.
 
             test_print_text_string
             Test to assert that text string is printed to console correctly.
 
             test_print_json_string
             Test to assert that JSON string is printed to console correctly.
+
+            test_cancel_clean_cache
+            Test to assert that message is printed if user disagrees to clean cache.
+
+            test_cancel_overwrite_file
+            Test to assert that message is printed if user disagrees to overwrite file.
 
     TestDatetime(unittest.TestCase) - Tests for correct datetime parsing.
 
@@ -200,6 +206,34 @@ Classes:
 
             test_pdf_no_internet_access
             Test to assert that PDF file is created without internet access.
+
+    TestColorize(unittest.TestCase) - Tests for colorization functionality.
+
+        Methods:
+
+            tearDown
+            Clean test file with SQL database, delete test folder.
+
+            test_colorize_message_sql_positive
+            Test to assert that colored message is printed if user agrees to clean cache.
+
+            test_colorize_message_sql_negative
+            Test to assert that colored message is printed if user disagrees to clean cache.
+
+            test_colorize_message_file_overwrite
+            Test to assert that colored message is printed if user disagrees to overwrite file.
+
+            test_colorize_print_text_string
+            Test to assert that text string is printed to console correctly.
+
+            test_colorize_print_json_string
+            Test to assert that JSON string is printed to console correctly.
+
+            test_colorize_verbose_info
+            Test to assert that INFO and WARNING logging messages are colorized in verbose mode.
+
+            test_colorize_verbose_error
+            Test to assert that ERROR logging messages are colorized in verbose mode.
 """
 
 import argparse
@@ -216,6 +250,7 @@ from shutil import rmtree
 from unittest.mock import patch
 
 from .. import app
+from .. import rss_reader_colors as rss_colors
 from .. import rss_reader_config as rss_config
 from .. import rss_reader_dates as rss_dates
 from .. import rss_reader_files as rss_files
@@ -263,7 +298,7 @@ class TestParser(unittest.TestCase):
     @patch("argparse.ArgumentParser.parse_args",
            return_value=argparse.Namespace(json=False, verbose=False, date="20211011",
                                            clean=False, limit=3, to_html=None,
-                                           to_pdf="C://rss.pdf",
+                                           to_pdf="C://rss.pdf", colorize=False,
                                            source="https://news.yahoo.com/rss/"))
     def test_parse_args(self, mock_args):
         """Test to assert that command-line input is parsed correctly."""
@@ -281,7 +316,7 @@ class TestParser(unittest.TestCase):
     @patch("argparse.ArgumentParser.parse_args",
            return_value=argparse.Namespace(json=False, verbose=False, date=None,
                                            clean=False, limit=3, to_html=None, to_pdf=None,
-                                           source=None))
+                                           colorize=False, source=None))
     def test_required_arg(self, mock_args, mock_stderr):
         """Test to assert that situation with no required argument raises parser.error."""
         with self.assertRaises(SystemExit):
@@ -291,7 +326,7 @@ class TestParser(unittest.TestCase):
     @patch("argparse.ArgumentParser.parse_args",
            return_value=argparse.Namespace(json=False, verbose=False, date=None,
                                            clean=False, limit=0, to_html=None, to_pdf=None,
-                                           source="https://news.yahoo.com/rss/"))
+                                           colorize=False, source="https://news.yahoo.com/rss/"))
     def test_limit_positive(self, mock_args, mock_stderr):
         """Test to assert that non-positive number as --limit argument raises parser.error."""
         with self.assertRaises(SystemExit):
@@ -301,7 +336,7 @@ class TestParser(unittest.TestCase):
     @patch("argparse.ArgumentParser.parse_args",
            return_value=argparse.Namespace(json=False, verbose=False, date="10112021",
                                            clean=False, limit=3, to_html=None, to_pdf=None,
-                                           source=None))
+                                           colorize=False, source=None))
     def test_correct_date(self, mock_args, mock_stderr):
         """Test to assert that --date argument in wrong format raises parser.error."""
         with self.assertRaises(SystemExit):
@@ -377,7 +412,7 @@ class TestUrlErrors(unittest.TestCase):
     @patch("argparse.ArgumentParser.parse_args",
            return_value=argparse.Namespace(json=False, verbose=False, date=None,
                                            clean=False, limit=1, to_html=None, to_pdf=None,
-                                           source="https://google.com"))
+                                           colorize=False, source="https://google.com"))
     def test_etree_parse_error(self, mock_args, mock_log):
         """Test to assert that xml.etree.ElementTree.ParseError is caught."""
         app.run()
@@ -388,7 +423,7 @@ class TestUrlErrors(unittest.TestCase):
     @patch("argparse.ArgumentParser.parse_args",
            return_value=argparse.Namespace(json=False, verbose=False, date=None,
                                            clean=False, limit=1, to_html=None, to_pdf=None,
-                                           source="https://www.w3schools.com/xml/note.xml"))
+                                           colorize=False, source="https://www.w3schools.com/xml/note.xml"))
     def test_rss_channel_error(self, mock_args, mock_log):
         """Test to assert that situation with no 'channel' tag in XML is handled correctly."""
         app.run()
@@ -399,7 +434,7 @@ class TestUrlErrors(unittest.TestCase):
     @patch("argparse.ArgumentParser.parse_args",
            return_value=argparse.Namespace(json=False, verbose=False, date=None,
                                            clean=False, limit=1, to_html=None, to_pdf=None,
-                                           source="https://florizel.by/feed"))
+                                           colorize=False, source="https://florizel.by/feed"))
     def test_rss_item_error(self, mock_args, mock_log):
         """Test to assert that situation with no 'item' tag in XML is handled correctly."""
         app.run()
@@ -431,7 +466,7 @@ class TestVerbose(unittest.TestCase):
         """Test to assert that messages at WARNING level are logged to stdout in verbose mode."""
         url = "https://www.independent.co.uk/news/uk/rss"
         root = rss_xml.download_xml(url)
-        rss_xml.process_rss(url, root, 500)
+        rss_xml.process_rss(url, root, 200)
         mock_log.assert_called_once()
 
 
@@ -587,14 +622,14 @@ class TestStringMethods(unittest.TestCase):
                                 "Image": "s5",
                                 "Description": "s6",
                                 "Link": "s7"}}
-        test_string = rss_text.dict_to_string(test_dict, False, None, "s2")
+        test_string = rss_text.dict_to_string(test_dict, False, None, "s2", False)
         compare_string = "\nFeed: s0\nDescription: s1\nURL: s2\n\nTitle: s3\nDate: s4\nImage: s5\nDetail: s6\n"
         self.assertIn(compare_string, test_string)
 
     def test_dict_to_json_string(self):
         """Test to assert that dictionary is converted to JSON string correctly."""
         test_dict = {"Channel": {"Title": "Новости"}}
-        test_string = rss_text.dict_to_string(test_dict, True, None, "s2")
+        test_string = rss_text.dict_to_string(test_dict, True, None, "s2", False)
         compare_string = '{\n    "Channel": {\n        "Title": "Новости"\n    }\n}'
         self.assertEqual(test_string, compare_string)
 
@@ -607,7 +642,7 @@ class TestStringMethods(unittest.TestCase):
                                 "Image": "s5",
                                 "Description": "s6",
                                 "Link": "s7"}}
-        test_string = rss_text.dict_to_string(test_dict, False, "20211012", "s2")
+        test_string = rss_text.dict_to_string(test_dict, False, "20211012", "s2", False)
         compare_string = "\nRSS news for October 12, 2021 from channel 's2'\n\nTitle: s1\n"
         self.assertIn(compare_string, test_string)
 
@@ -618,26 +653,34 @@ class TestPrinting(unittest.TestCase):
     Methods:
 
         tearDown
-        Clean test file with SQL database.
+        Clean test file with SQL database, delete test file and folder.
 
         test_print_text_string
         Test to assert that text string is printed to console correctly.
 
         test_print_json_string
         Test to assert that JSON string is printed to console correctly.
+
+        test_cancel_clean_cache
+        Test to assert that message is printed if user disagrees to clean cache.
+
+        test_cancel_overwrite_file
+        Test to assert that message is printed if user disagrees to overwrite file.
     """
 
     @patch("sys.stdout", new_callable=StringIO)
     @patch("builtins.input", return_value="y")
     @patch("rss_reader.rss_reader_sql.CACHE_FILE", TEST_DB)
     def tearDown(self, mock_input, mock_stdout):
-        """Clean test file with SQL database."""
-        rss_sql.clean_cache()
+        """Clean test file with SQL database, delete test folder."""
+        rss_sql.clean_cache(False)
+        if os.path.exists(NEW_FOLDER):
+            rmtree(NEW_FOLDER)
 
     @patch("argparse.ArgumentParser.parse_args",
            return_value=argparse.Namespace(json=False, verbose=False, date=None,
                                            clean=False, limit=1, to_html=None, to_pdf=None,
-                                           source="https://feeds.skynews.com/feeds/rss/home.xml"))
+                                           colorize=False, source="https://feeds.skynews.com/feeds/rss/home.xml"))
     @patch("rss_reader.rss_reader_sql.CACHE_FILE", TEST_DB)
     def test_print_text_string(self, mock_args):
         """Test to assert that text string is printed to console correctly."""
@@ -657,9 +700,9 @@ class TestPrinting(unittest.TestCase):
         self.assertIn("Read more: ", captured_output.readline())
 
     @patch("argparse.ArgumentParser.parse_args",
-           return_value=argparse.Namespace(json=True, verbose=True, date=None,
+           return_value=argparse.Namespace(json=True, verbose=False, date=None,
                                            clean=False, limit=1, to_html=None, to_pdf=None,
-                                           source="https://feeds.skynews.com/feeds/rss/home.xml"))
+                                           colorize=False, source="https://feeds.skynews.com/feeds/rss/home.xml"))
     @patch("rss_reader.rss_reader_sql.CACHE_FILE", TEST_DB)
     def test_print_json_string(self, mock_args):
         """Test to assert that JSON string is printed to console correctly."""
@@ -679,6 +722,34 @@ class TestPrinting(unittest.TestCase):
         self.assertIn('        "Image"', captured_output.readline())
         self.assertIn('        "Description"', captured_output.readline())
         self.assertIn('        "Link"', captured_output.readline())
+
+    @patch("sys.stdout", new_callable=StringIO)
+    @patch("builtins.input", return_value="n")
+    @patch("argparse.ArgumentParser.parse_args",
+           return_value=argparse.Namespace(json=False, verbose=True, date=None,
+                                           clean=True, limit=None, to_html=None, to_pdf=None,
+                                           colorize=False, source=None))
+    @patch("rss_reader.rss_reader_sql.CACHE_FILE", TEST_DB)
+    def test_cancel_clean_cache(self, mock_args, mock_input, mock_stdout):
+        """Test to assert that message is printed if user disagrees to clean cache."""
+        app.run()
+        output = mock_stdout.getvalue()
+        self.assertIn("Operation cancelled", output)
+
+    @patch("sys.stdout", new_callable=StringIO)
+    @patch("builtins.input", return_value="n")
+    @patch("argparse.ArgumentParser.parse_args",
+           return_value=argparse.Namespace(json=False, verbose=False, date=None,
+                                           clean=False, limit=1, to_html=f"{NEW_FOLDER}",
+                                           to_pdf=None,
+                                           colorize=False, source="https://feeds.skynews.com/feeds/rss/home.xml"))
+    @patch("rss_reader.rss_reader_sql.CACHE_FILE", TEST_DB)
+    def test_cancel_overwrite_file(self, mock_args, mock_input, mock_stdout):
+        """Test to assert that message is printed if user disagrees to overwrite file."""
+        app.run()
+        app.run()
+        output = mock_stdout.getvalue()
+        self.assertIn("Operation cancelled", output)
 
 
 class TestDatetime(unittest.TestCase):
@@ -763,14 +834,14 @@ class TestSql(unittest.TestCase):
     @patch("rss_reader.rss_reader_sql.CACHE_FILE", TEST_DB)
     def setUp(self, mock_input, mock_stdout):
         """Clean test file with SQL database."""
-        rss_sql.clean_cache()
+        rss_sql.clean_cache(False)
 
     @patch("sys.stdout", new_callable=StringIO)
     @patch("builtins.input", return_value="y")
     @patch("rss_reader.rss_reader_sql.CACHE_FILE", TEST_DB)
     def tearDown(self, mock_input, mock_stdout):
         """Clean test file with SQL database."""
-        rss_sql.clean_cache()
+        rss_sql.clean_cache(False)
 
     @classmethod
     def tearDownClass(cls):
@@ -784,7 +855,7 @@ class TestSql(unittest.TestCase):
     @patch("argparse.ArgumentParser.parse_args",
            return_value=argparse.Namespace(json=False, verbose=False, date=None,
                                            clean=True, limit=1, to_html=None, to_pdf=None,
-                                           source=None))
+                                           colorize=False, source=None))
     @patch("rss_reader.rss_reader_sql.CACHE_FILE", TEST_INVALID_PATH)
     def test_table_access(self, mock_args, mock_input, mock_stdout, mock_log):
         """Test to assert that sitution with no access to SQL table is handled correctly."""
@@ -797,7 +868,7 @@ class TestSql(unittest.TestCase):
         rss_sql.retrieve_from_sql("19011016", None, 1)
         mock_log.assert_called_once()
         mock_log.reset_mock()
-        rss_sql.clean_cache()
+        rss_sql.clean_cache(False)
         mock_log.assert_called_once()
 
     @patch("rss_reader.rss_reader_sql.CACHE_FILE", NEW_DB)
@@ -811,7 +882,7 @@ class TestSql(unittest.TestCase):
     @patch("argparse.ArgumentParser.parse_args",
            return_value=argparse.Namespace(json=False, verbose=False, date=None,
                                            clean=True, limit=None, to_html=None, to_pdf=None,
-                                           source=None))
+                                           colorize=False, source=None))
     @patch("rss_reader.rss_reader_sql.CACHE_FILE", TEST_DB)
     def test_clean_table(self, mock_args, mock_input, mock_stdout):
         """Test to assert that SQL table has been cleaned."""
@@ -823,7 +894,7 @@ class TestSql(unittest.TestCase):
     @patch("argparse.ArgumentParser.parse_args",
            return_value=argparse.Namespace(json=False, verbose=False, date=None,
                                            clean=False, limit=1, to_html=None, to_pdf=None,
-                                           source="https://www.cbr.ru/scripts/RssCurrency.asp"))
+                                           colorize=False, source="https://www.cbr.ru/scripts/RssCurrency.asp"))
     @patch("rss_reader.rss_reader_sql.CACHE_FILE", TEST_DB)
     def test_store_to_table(self, mock_args, mock_stdout):
         """Test to assert that information has been stored to SQL table."""
@@ -846,7 +917,7 @@ class TestSql(unittest.TestCase):
     @patch("argparse.ArgumentParser.parse_args",
            return_value=argparse.Namespace(json=False, verbose=False, date="20211012",
                                            clean=False, limit=2, to_html=None, to_pdf=None,
-                                           source=None))
+                                           colorize=False, source=None))
     @patch("rss_reader.rss_reader_sql.CACHE_FILE", TEST_DB)
     def test_retrieve_from_table_positive(self, mock_args, mock_log):
         """Test to assert that information is retrieved from SQL table correctly."""
@@ -877,7 +948,7 @@ class TestSql(unittest.TestCase):
     @patch("argparse.ArgumentParser.parse_args",
            return_value=argparse.Namespace(json=False, verbose=False, date="20211011",
                                            clean=False, limit=None, to_html=None, to_pdf=None,
-                                           source="https://news.yahoo.com/rss/"))
+                                           colorize=False, source="https://news.yahoo.com/rss/"))
     @patch("rss_reader.rss_reader_sql.CACHE_FILE", TEST_DB)
     def test_retrieve_from_table_negative(self, mock_args, mock_log):
         """Test to assert that situation with no information in SQL table is handled correctly."""
@@ -928,7 +999,6 @@ class TestPathFile(unittest.TestCase):
         for path in [TEST_HTML, TEST_PDF]:
             if os.path.exists(path):
                 os.chmod(path, 0o777)
-                os.remove(path)
         for path in [NEW_FOLDER, "C:\\Windows\\xxxyyyzzz\\"]:
             if os.path.exists(path):
                 os.chmod(path, 0o777)
@@ -940,32 +1010,32 @@ class TestPathFile(unittest.TestCase):
     def test_path(self, mock_input, mock_log):
         """Test to assert that path is sanitized correctly."""
         paths = {"to_html": f"{NEW_FOLDER}"}
-        filenames = rss_files.sanitize_paths(paths)
+        filenames = rss_files.sanitize_paths(paths, False)
         self.assertEqual(filenames["to_html"], TEST_HTML)
-        filenames = rss_files.sanitize_paths(paths)
+        filenames = rss_files.sanitize_paths(paths, False)
         self.assertEqual(filenames["to_html"], TEST_HTML)
         paths = {"to_html": TEST_INVALID_PATH}
-        rss_files.sanitize_paths(paths)
+        rss_files.sanitize_paths(paths, False)
         mock_log.assert_called_once()
         mock_log.reset_mock()
         if os.name == "nt":
             paths = {"to_html": "C:\\Windows\\xxxyyyzzz.html"}
-            rss_files.sanitize_paths(paths)
+            rss_files.sanitize_paths(paths, False)
             mock_log.assert_called_once()
             mock_log.reset_mock()
             paths = {"to_html": "C:\\Windows\\xxxyyyzzz\\xxxyyyzzz.html"}
-            rss_files.sanitize_paths(paths)
+            rss_files.sanitize_paths(paths, False)
             mock_log.assert_called_once()
         elif os.name == "posix":
             if not os.path.exists(NEW_FOLDER):
                 os.mkdir(NEW_FOLDER)
             os.chmod(NEW_FOLDER, 0o555)
             paths = {"to_html": os.path.join(NEW_FOLDER, "rss2.html")}
-            rss_files.sanitize_paths(paths)
+            rss_files.sanitize_paths(paths, False)
             mock_log.assert_called_once()
             mock_log.reset_mock()
             paths = {"to_html": os.path.join(NEW_FOLDER, "rss")}
-            rss_files.sanitize_paths(paths)
+            rss_files.sanitize_paths(paths, False)
             mock_log.assert_called_once()
 
     @patch("logging.warning")
@@ -1034,14 +1104,14 @@ class TestPathFile(unittest.TestCase):
         self.assertEqual(heading_1, "RSS news from channel <a href='s2' target='_blank'>s0</a>")
         self.assertEqual(heading_2, "RSS news from channel <a href='s2' target='_blank'>s2</a>")
 
-    @patch("rss_reader.rss_reader_sql.CACHE_FILE", TEST_DB)
     @patch("sys.stderr", new_callable=StringIO)
     @patch("sys.stdout", new_callable=StringIO)
     @patch("argparse.ArgumentParser.parse_args",
            return_value=argparse.Namespace(json=False, verbose=False, date=None,
                                            clean=False, limit=1, to_html=f"{NEW_FOLDER}",
                                            to_pdf=f"{NEW_FOLDER}",
-                                           source="https://feeds.skynews.com/feeds/rss/home.xml"))
+                                           colorize=False, source="https://feeds.skynews.com/feeds/rss/home.xml"))
+    @patch("rss_reader.rss_reader_sql.CACHE_FILE", TEST_DB)
     def test_write_to_file(self, mock_args, mock_stdout, mock_stderr):
         """Test to assert that HTML and PDF files are created."""
         app.run()
@@ -1057,7 +1127,7 @@ class TestPathFile(unittest.TestCase):
            return_value=argparse.Namespace(json=False, verbose=False, date=None,
                                            clean=False, limit=1, to_html=None,
                                            to_pdf=f"{NEW_FOLDER}",
-                                           source="https://lenta.ru/rss/news"))
+                                           colorize=False, source="https://lenta.ru/rss/news"))
     def test_pdf_permission_error(self, mock_args, mock_input, mock_stdout, mock_stderr, mock_log):
         """Test to assert that PermissionError in creating PDF file is handled correctly."""
         app.run()
@@ -1071,15 +1141,147 @@ class TestPathFile(unittest.TestCase):
     def test_pdf_no_internet_access(self, mock_stdout, mock_stderr):
         """Test to assert that PDF file is created without internet access."""
         paths = {"to_pdf": f"{NEW_FOLDER}"}
-        filenames = rss_files.sanitize_paths(paths)
+        filenames = rss_files.sanitize_paths(paths, False)
         html_str = "<html><img src='http://google.com'></html>"
 
         def guard(*args, **kwargs):
             raise socket.gaierror
 
         socket.socket.connect = guard
-        rss_files.create_files(html_str, filenames)
+        rss_files.create_files(html_str, filenames, False)
         self.assertTrue(os.path.exists(TEST_PDF))
+
+
+class TestColorize(unittest.TestCase):
+    """Tests for colorization functionality.
+
+    Methods:
+
+        tearDown
+        Clean test file with SQL database, delete test folder.
+
+        test_colorize_message_sql_positive
+        Test to assert that colored message is printed if user agrees to clean cache.
+
+        test_colorize_message_sql_negative
+        Test to assert that colored message is printed if user disagrees to clean cache.
+
+        test_colorize_message_file_overwrite
+        Test to assert that colored message is printed if user disagrees to overwrite file.
+
+        test_colorize_print_text_string
+        Test to assert that text string is printed to console correctly.
+
+        test_colorize_print_json_string
+        Test to assert that JSON string is printed to console correctly.
+
+        test_colorize_verbose_info
+        Test to assert that INFO and WARNING logging messages are colorized in verbose mode.
+
+        test_colorize_verbose_error
+        Test to assert that ERROR logging messages are colorized in verbose mode.
+    """
+
+    @patch("sys.stdout", new_callable=StringIO)
+    @patch("builtins.input", return_value="y")
+    @patch("rss_reader.rss_reader_sql.CACHE_FILE", TEST_DB)
+    def tearDown(self, mock_input, mock_stdout):
+        """Clean test file with SQL database, delete test folder."""
+        rss_sql.clean_cache(False)
+        if os.path.exists(NEW_FOLDER):
+            rmtree(NEW_FOLDER)
+
+    @patch("sys.stdout", new_callable=StringIO)
+    @patch("builtins.input", return_value="y")
+    @patch("argparse.ArgumentParser.parse_args",
+           return_value=argparse.Namespace(json=False, verbose=False, date=None,
+                                           clean=True, limit=None, to_html=None, to_pdf=None,
+                                           colorize=True, source=None))
+    @patch("rss_reader.rss_reader_sql.CACHE_FILE", TEST_DB)
+    def test_colorize_message_sql_positive(self, mock_args, mock_input, mock_stdout):
+        """Test to assert that colored message is printed if user agrees to clean cache."""
+        app.run()
+        output = mock_stdout.getvalue()
+        self.assertIn(f"{rss_colors.COLORS['green']}", output)
+
+    @patch("sys.stdout", new_callable=StringIO)
+    @patch("builtins.input", return_value="n")
+    @patch("argparse.ArgumentParser.parse_args",
+           return_value=argparse.Namespace(json=False, verbose=False, date=None,
+                                           clean=True, limit=None, to_html=None, to_pdf=None,
+                                           colorize=True, source=None))
+    @patch("rss_reader.rss_reader_sql.CACHE_FILE", TEST_DB)
+    def test_colorize_message_sql_negative(self, mock_args, mock_input, mock_stdout):
+        """Test to assert that colored message is printed if user disagrees to clean cache."""
+        app.run()
+        output = mock_stdout.getvalue()
+        self.assertIn(f"{rss_colors.COLORS['yellow']}", output)
+
+    @patch("sys.stdout", new_callable=StringIO)
+    @patch("builtins.input", return_value="n")
+    @patch("argparse.ArgumentParser.parse_args",
+           return_value=argparse.Namespace(json=False, verbose=False, date=None,
+                                           clean=False, limit=1, to_html=f"{NEW_FOLDER}",
+                                           to_pdf=None, colorize=True,
+                                           source="https://feeds.skynews.com/feeds/rss/home.xml"))
+    @patch("rss_reader.rss_reader_sql.CACHE_FILE", TEST_DB)
+    def test_colorize_message_file_overwrite(self, mock_args, mock_input, mock_stdout):
+        """Test to assert that colored message is printed if user disagrees to overwrite file."""
+        app.run()
+        app.run()
+        output = mock_stdout.getvalue()
+        self.assertIn(f"{rss_colors.COLORS['yellow']}", output)
+
+    @patch("sys.stdout", new_callable=StringIO)
+    @patch("argparse.ArgumentParser.parse_args",
+           return_value=argparse.Namespace(json=False, verbose=False, date=None,
+                                           clean=False, limit=2, to_html=None, to_pdf=None,
+                                           colorize=True, source="https://feeds.skynews.com/feeds/rss/home.xml"))
+    @patch("rss_reader.rss_reader_sql.CACHE_FILE", TEST_DB)
+    def test_colorize_print_text_string(self, mock_args, mock_stdout):
+        """Test to assert that text string is printed to console correctly."""
+        app.run()
+        output = mock_stdout.getvalue()
+        self.assertIn(f"{rss_colors.COLORS['blue']}", output)
+        self.assertIn(f"{rss_colors.COLORS['cyan']}", output)
+        self.assertIn(f"{rss_colors.COLORS['magenta']}", output)
+
+    @patch("sys.stdout", new_callable=StringIO)
+    @patch("argparse.ArgumentParser.parse_args",
+           return_value=argparse.Namespace(json=True, verbose=False, date=None,
+                                           clean=False, limit=2, to_html=None, to_pdf=None,
+                                           colorize=True, source="https://feeds.skynews.com/feeds/rss/home.xml"))
+    @patch("rss_reader.rss_reader_sql.CACHE_FILE", TEST_DB)
+    def test_colorize_print_json_string(self, mock_args, mock_stdout):
+        """Test to assert that JSON string is printed to console correctly."""
+        app.run()
+        output = mock_stdout.getvalue()
+        self.assertIn(f"{rss_colors.COLORS['magenta']}", output)
+
+    @patch("sys.stdout", new_callable=StringIO)
+    @patch("argparse.ArgumentParser.parse_args",
+           return_value=argparse.Namespace(json=False, verbose=True, date=None,
+                                           clean=False, limit=200, to_html=None, to_pdf=None,
+                                           colorize=True, source="https://feeds.skynews.com/feeds/rss/home.xml"))
+    @patch("rss_reader.rss_reader_sql.CACHE_FILE", TEST_DB)
+    def test_colorize_verbose_info(self, mock_args, mock_stdout):
+        """Test to assert that INFO and WARNING logging messages are colorized in verbose mode."""
+        app.run()
+        output = mock_stdout.getvalue()
+        self.assertIn(f"{rss_colors.COLORS['green']}", output)
+        self.assertIn(f"{rss_colors.COLORS['yellow']}", output)
+
+    @patch("sys.stdout", new_callable=StringIO)
+    @patch("argparse.ArgumentParser.parse_args",
+           return_value=argparse.Namespace(json=False, verbose=True, date=None,
+                                           clean=False, limit=1, to_html=None, to_pdf=None,
+                                           colorize=True, source="feeds.skynews.com/feeds/rss/home.xml"))
+    @patch("rss_reader.rss_reader_sql.CACHE_FILE", TEST_DB)
+    def test_colorize_verbose_error(self, mock_args, mock_stdout):
+        """Test to assert that ERROR logging messages are colorized in verbose mode."""
+        app.run()
+        output = mock_stdout.getvalue()
+        self.assertIn(f"{rss_colors.COLORS['red']}", output)
 
 
 if __name__ == "__main__":

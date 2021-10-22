@@ -1,6 +1,20 @@
 # Change Log
 
 
+## 1.4
+
+Released on October 22, 2021
+
+### Added
+
+* Print RSS news, program messages and logging info in colorized mode (optional argument --colorize)
+
+### Changed
+
+* Update all docstrings
+* Update README.md, CHANGELOG.md, setup.cfg
+
+
 ## 1.3
 
 Released on October 21, 2021

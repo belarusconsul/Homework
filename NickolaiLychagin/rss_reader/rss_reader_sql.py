@@ -17,16 +17,17 @@
         retrieve_from_sql(date: str, source: str, limit: int/None) -> dict
         Retrieve information from SQL table to a dictionary.
 
-        clean_cache():
+        clean_cache(colorize: bool):
         Delete all data from SQL table and vacuum it.
 """
 
 import logging
-import os.path
+import os
 import sqlite3
 
 from .rss_reader_dates import parse_date, reformat_date
 from .rss_reader_text import get_ending
+from .rss_reader_colors import COLORS
 
 
 # Path to local file with SQL database (in folder 'files')
@@ -165,10 +166,21 @@ def retrieve_from_sql(date, source, limit):
         logging.error(f"Unable to retrieve info from сache file '{CACHE_FILE}' - {err}")
 
 
-def clean_cache():
-    """Delete all data from SQL table and vacuum it."""
-    consent = input("Are you sure you want to clean all data from cache file? "
+def clean_cache(colorize):
+    """Delete all data from SQL table and vacuum it.
+
+    Parameters:
+        colorize: bool - True (print messages in colorized mode) or False (print messages in normal mode).
+    """
+
+    logging.warning(f"User requested to clean cache file '{CACHE_FILE}'")
+    confirmation = ("Are you sure you want to clean all data from cache file? "
                     "Press 'y' to confirm or any other key to cancel.\n")
+    if colorize:
+        os.system("")
+        consent = input(COLORS["red"] + confirmation + COLORS["reset"])
+    else:
+        consent = input(confirmation)
     if consent.upper() == "Y":
         try:
             con = sqlite3.connect(CACHE_FILE)
@@ -178,6 +190,17 @@ def clean_cache():
             cur.execute("VACUUM;")
             con.close()
             logging.info(f"Cache file '{CACHE_FILE}' cleaned of all data")
-            print("All data from cache file cleaned successfully")
+            message = "All data from cache file cleaned successfully"
+            if colorize:
+                print(COLORS["green"] + message + COLORS["reset"])
+            else:
+                print(message)
         except sqlite3.OperationalError as err:
             logging.error(f"Unable to clean сache file '{CACHE_FILE}' - {err}")
+    else:
+        logging.warning(f"Operation to clean cache file '{CACHE_FILE}' cancelled by user")
+        message = "Operation cancelled"
+        if colorize:
+            print(COLORS["yellow"] + message + COLORS["reset"])
+        else:
+            print(message)

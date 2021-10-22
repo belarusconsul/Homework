@@ -5,7 +5,7 @@
 
 
 ### Author: Nickolai Lychagin, belarusconsul@gmail.com
-### Version 1.3, 21.10.2021
+### Version 1.4, 22.10.2021
 
 > This program:
 > 
@@ -15,6 +15,7 @@
 > - stores downloaded data to local cache file in SQL format
 > - retrieves information from cache for a particular date
 > - converts data to HTML and PDF formats and saves it to a local file
+> - prints RSS news, program messages and logging info in normal or colorized mode
 >
 > It supports all news feeds that fully comply with RSS 2.0 Specification. Correct operation on other RSS channels is not guaranteed. 
 
@@ -35,15 +36,15 @@
    
 4. Install prebuilt package to your computer:<br>
    **Windows:**<br>
-   `py -m pip install <path to /Homework/NickolaiLychagin/dist/rss_reader-1.3-py3-none-any.whl>`<br>
+   `py -m pip install <path to /Homework/NickolaiLychagin/dist/rss_reader-1.4-py3-none-any.whl>`<br>
    **Unix/MacOS:**<br>
-   `python3 -m pip install <path to /Homework/NickolaiLychagin/dist/rss_reader-1.3-py3-none-any.whl>`<br>
+   `python3 -m pip install <path to /Homework/NickolaiLychagin/dist/rss_reader-1.4-py3-none-any.whl>`<br>
 
    This installs program from a Wheel file (built distribution). If you prefer to use a Source Distribution file (source archive) run:<br>
    **Windows:**<br>
-   `py -m pip install <path to /Homework/NickolaiLychagin/dist/rss_reader-1.3.tar.gz>`<br>
+   `py -m pip install <path to /Homework/NickolaiLychagin/dist/rss_reader-1.4.tar.gz>`<br>
    **Unix/MacOS:**<br>
-   `python3 -m pip install <path to /Homework/NickolaiLychagin/dist/rss_reader-1.3.tar.gz>`<br>
+   `python3 -m pip install <path to /Homework/NickolaiLychagin/dist/rss_reader-1.4.tar.gz>`<br>
 
    After that you can run program through CLI utility rss_reader.
 
@@ -70,7 +71,7 @@
 
 ```
     usage: rss_reader.py [-h] [--version] [--json] [--verbose] [--limit] [--date]
-    [--clean] [--to-html] [--to-pdf] [source]
+    [--clean] [--to-html] [--to-pdf] [--colorize] [source]
 
     positional arguments:
       source         RSS URL
@@ -85,6 +86,7 @@
       --clean     Clean all data from cache file
       --to-html   Convert news to HTML format (provide path to folder or file *.html)
       --to-pdf    Convert news to PDF format (provide path to folder or file *.pdf)
+      --colorize  Print result in colorized mode
 ```
 
 ---
@@ -113,6 +115,7 @@
 #### \_\_init\_\_.py - Package initialization file.
 #### \_\_main\_\_.py - Allow program to run by package name.
 #### app.py - Main program logic.
+#### rss_reader_colors.py - Colors for colorization.
 #### rss_reader_config.py - Parse arguments from command line and config logging.
 #### rss_reader_dates.py - Parse and reformat dates.
 #### rss_reader_files.py - Sanitize paths, convert to HTML string, create HTML and/or PDF files.
@@ -232,4 +235,25 @@ Read more: http://news.sky.com/story/brexit-eu-offers-to-cut-80-of-gb-northern-i
         "Link": "http://news.sky.com/story/brexit-eu-offers-to-cut-80-of-gb-northern-ireland-checks-on-some-goods-to-end-sausage-war-12433021"
     }
 }
+```
+
+---
+## TESTING
+
+```
+Name                              Stmts   Miss  Cover   Missing
+---------------------------------------------------------------
+rss_reader\__init__.py                0      0   100%
+rss_reader\app.py                    48      3    94%   167-169
+rss_reader\rss_reader_colors.py       2      0   100%
+rss_reader\rss_reader_config.py      65      0   100%
+rss_reader\rss_reader_dates.py       20      0   100%
+rss_reader\rss_reader_files.py      143      7    95%   79-80, 85-86, 208-210
+rss_reader\rss_reader_sql.py        104      0   100%
+rss_reader\rss_reader_text.py        86      0   100%
+rss_reader\rss_reader_xml.py        107      0   100%
+rss_reader\tests\__init__.py          0      0   100%
+rss_reader\tests\tests.py           561     12    98%   1029-1039, 1288
+---------------------------------------------------------------
+TOTAL                              1136     22    98%
 ```

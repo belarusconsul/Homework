@@ -10,6 +10,7 @@ This program:
     - stores downloaded data to local cache file in SQL format
     - retrieves information from cache for a particular date
     - converts data to HTML and PDF formats and saves it to a local file
+    - prints RSS news, program messages and logging info in normal or colorized mode
 
 It supports all news feeds that fully comply with RSS 2.0 Specification.
 Correct operation on other RSS channels is not guaranteed.
@@ -48,7 +49,7 @@ Usage:
             rss_reader <arguments>
 
     usage: rss_reader.py [-h] [--version] [--json] [--verbose] [--limit]
-    [--date] [--clean] [--to-html] [--to-pdf] [source]
+    [--date] [--clean] [--to-html] [--to-pdf] [--colorize] [source]
 
     positional arguments:
       source         RSS URL
@@ -63,6 +64,7 @@ Usage:
       --clean     Clean all data from cache file
       --to-html   Convert news to HTML format (provide path to folder or file *.html)
       --to-pdf    Convert news to PDF format (provide path to folder or file *.pdf)
+      --colorize  Print result in colorized mode
 
 Package structure:
 
@@ -104,6 +106,9 @@ Package structure:
 
     app.py
     Main program logic.
+
+    rss_reader_colors.py
+    Colors for colorization.
 
     rss_reader_config.py
     Parse arguments from command line and config logging.
@@ -149,38 +154,45 @@ def run():
         - store and retrieve information from SQL table
         - clean SQL table
         - convert information to HTML and/or PDF formats
+        - prints RSS news and messages in normal or colorized mode
     """
     args = parse_args()
     arg_source = args["source"]
     arg_limit = args["limit"]
     arg_date = args["date"]
-    config_logging(args["verbose"])
+    arg_colorize = args["colorize"]
+    config_logging(args["verbose"], arg_colorize)
     logging.info(f"Input arguments: {args}")
     if not os.path.exists(CACHE_FILE):
         if not create_sql_table():
+            logging.info("Program finished")
             return None
     if args["clean"]:
-        clean_cache()
+        clean_cache(arg_colorize)
+        logging.info("Program finished")
         return None
     elif arg_date is not None:
         news_dict = retrieve_from_sql(arg_date, arg_source, arg_limit)
         if news_dict is None:
+            logging.info("Program finished")
             return None
     else:
         root = download_xml(arg_source)
         if root is None:
+            logging.info("Program finished")
             return None
         news_dict = process_rss(arg_source, root, arg_limit)
         if news_dict is None:
+            logging.info("Program finished")
             return None
         store_to_sql(news_dict)
-    string_to_print = dict_to_string(news_dict, args["json"], arg_date, arg_source)
+    string_to_print = dict_to_string(news_dict, args["json"], arg_date, arg_source, arg_colorize)
     logging.info("Printing information to stdout")
     print(string_to_print)
     if args["to_html"] is not None or args["to_pdf"] is not None:
         paths = {k: v for k, v in args.items() if k.startswith("to_") and v is not None}
-        filenames = sanitize_paths(paths)
+        filenames = sanitize_paths(paths, arg_colorize)
         if filenames:
             html_str = convert_to_html(news_dict, arg_date, arg_source)
-            create_files(html_str, filenames)
+            create_files(html_str, filenames, arg_colorize)
     logging.info("Program finished")

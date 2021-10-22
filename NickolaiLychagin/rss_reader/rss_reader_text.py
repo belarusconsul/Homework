@@ -17,17 +17,19 @@
         get_ending(num: int) -> str
         Return correct singular or plural form of the word 'item'.
 
-        dict_to_string(news_dict: dict, json_flag: bool, date: str/None, souce: str/None) -> str
+        dict_to_string(news_dict: dict, json_flag: bool, date: str/None, souce: str/None, colorize: bool) -> str
         Convert a dictionary of RSS data into a string.
 """
 
 import json
 import logging
+import os
 import re
 from io import StringIO
 from html import unescape
 
 from .rss_reader_dates import reformat_date
+from .rss_reader_colors import COLORS
 
 
 def strip_text(text):
@@ -92,7 +94,7 @@ def get_ending(num):
     return "item" if num == 1 else "items"
 
 
-def dict_to_string(news_dict, json_flag, date, source):
+def dict_to_string(news_dict, json_flag, date, source, colorize):
     """Convert a dictionary of RSS data into a string.
 
     Parameters:
@@ -100,16 +102,25 @@ def dict_to_string(news_dict, json_flag, date, source):
         json_flag: bool - True (convert to json string) or False (convert to text string).
         date: str/None - Date of items retrieved from cache. None - indicates that items were downloaded from URL.
         souce: str/None - URL address of RSS channel. None - indicates that items were downloaded from cache.
+        colorize: bool - True (make string in colorized mode) or False (make string in normal mode).
 
     Returns:
         final_string: str - A string with information from a dictionary.
     """
 
+    if colorize:
+        os.system("")
     if json_flag:
         final_string = json.dumps(news_dict, ensure_ascii=False, indent=4)
+        if colorize:
+            string_obj = StringIO()
+            string_obj.write(COLORS["magenta"] + final_string + COLORS["reset"])
+            final_string = string_obj.getvalue()
         logging.info("Data converted to JSON string")
     else:
         string_obj = StringIO()
+        if colorize:
+            string_obj.write(COLORS["blue"])
         string_obj.write("\n")
         if date is None:
             if news_dict["Channel"]["Title"]:
@@ -124,9 +135,16 @@ def dict_to_string(news_dict, json_flag, date, source):
                 string_obj.write(f"RSS news for {date_reformatted} from all channels\n")
             else:
                 string_obj.write(f"RSS news for {date_reformatted} from channel '{news_dict['News 1']['Channel']}'\n")
+        if colorize:
+            string_obj.write(COLORS["reset"])
         string_obj.write("\n")
         for item in news_dict:
             if item.startswith("News"):
+                if colorize:
+                    if int((item[5:])) % 2 == 1:
+                        string_obj.write(COLORS["magenta"])
+                    else:
+                        string_obj.write(COLORS["cyan"])
                 if news_dict[item]["Title"]:
                     string_obj.write(f"Title: {news_dict[item]['Title']}\n")
                 if date is not None and source is None:
@@ -142,6 +160,8 @@ def dict_to_string(news_dict, json_flag, date, source):
                     string_obj.write(f"Detail: {news_dict[item]['Description']}\n")
                 if news_dict[item]["Link"]:
                     string_obj.write(f"Read more: {news_dict[item]['Link']}\n")
+                if colorize:
+                    string_obj.write(COLORS["reset"])
                 string_obj.write("\n")
         final_string = string_obj.getvalue()[:-1]
         logging.info("Data converted to text string")
